@@ -30,6 +30,8 @@ type Server struct {
 var serverName = flag.String("name", "default", "Senders name") // set with "-name <name>" in terminal
 var port = flag.String("port", "5400", "Server port")           // set with "-port <port>" in terminal
 
+var kvmap map[int64]int64
+
 func main() {
 
 	// f := setLog() //uncomment this line to log to a log.txt file instead of the console
@@ -71,6 +73,8 @@ func launchServer() {
 
 	log.Printf("Server %s: Listening at %v\n", *serverName, list.Addr())
 
+	kvmap = map[int64]int64{}
+
 	if err := grpcServer.Serve(list); err != nil {
 		log.Fatalf("failed to serve %v", err)
 	}
@@ -83,7 +87,23 @@ func (s *Server) Put(ctx context.Context, kvp *gRPC.KeyValPair) (*gRPC.PutAck, e
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	return &gRPC.PutAck{Response: 0}, nil
+	kvmap[kvp.Key] = kvp.Val
+	return &gRPC.PutAck{Response: true}, nil
+}
+
+func (s *Server) Get(ctx context.Context, key *gRPC.Key) (*gRPC.GetAck, error) {
+	// locks the server ensuring no one else can increment the value at the same time.
+	// and unlocks the server when the method is done.
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	val, exists := kvmap[key.Key]
+
+	if exists == false {
+		return &gRPC.GetAck{Response: 0}, nil
+	}
+
+	return &gRPC.GetAck{Response: val}, nil
 }
 
 // sets the logger to use a log.txt file instead of the console

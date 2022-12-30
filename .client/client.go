@@ -68,7 +68,7 @@ func ConnectToServer() {
 
 func parseInput() {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("Type the amount you wish to increment with here. Type 0 to get the current value")
+	fmt.Println("In order to put or get, type 'put:x,y' or 'get:x'")
 	fmt.Println("--------------------")
 
 	//Infinite loop to listen for clients input.
@@ -87,15 +87,25 @@ func parseInput() {
 			continue
 		}
 
-		//Convert string to int64, return error if the int is larger than 32bit or not a number
-		val, err := strconv.ParseInt(input, 10, 64)
-		if err != nil {
-			if input == "hi" {
-				sayHi()
+		str := strings.Split(input, ":")[1]
+
+		if strings.Contains(input, "put") {
+			key, errK := strconv.Atoi(strings.Split(str, ",")[0])
+			val, errV := strconv.Atoi(strings.Split(str, ",")[1])
+			if errK == nil && errV == nil {
+				Put(int64(key), int64(val))
+			} else {
+				fmt.Println("PUT: You formatted the command wrongly")
 			}
-			continue
+
+		} else if strings.Contains(input, "get") {
+			key, errK := strconv.Atoi(strings.Split(str, ",")[0])
+			if errK == nil {
+				Get(int64(key))
+			} else {
+				fmt.Println("GET: You formatted the command wrongly")
+			}
 		}
-		incrementVal(val)
 	}
 }
 
@@ -107,13 +117,29 @@ func Put(key int64, val int64) {
 	}
 
 	//Make gRPC call to server with amount, and recieve acknowlegdement back.
-	ack, err := server.Put(context.Background(), kvp)
+	putAck, err := server.Put(context.Background(), kvp)
 	if err != nil {
-		log.Printf("Client %s: no response from the server, attempting to reconnect", *clientsName)
+		log.Printf("Client %s: PUT: no response from the server, attempting to reconnect", *clientsName)
 		log.Println(err)
 	}
 
-	fmt.Appendln(ack.Response)
+	fmt.Printf("Put: %d\n", putAck.Response)
+}
+
+func Get(in_key int64) {
+	//create amount type
+	key := &gRPC.Key{
+		Key: in_key,
+	}
+
+	//Make gRPC call to server with amount, and recieve acknowlegdement back.
+	getAck, err := server.Get(context.Background(), key)
+	if err != nil {
+		log.Printf("Client %s: GET: no response from the server, attempting to reconnect", *clientsName)
+		log.Println(err)
+	}
+
+	fmt.Printf("Get: %d\n", getAck.Response)
 }
 
 // Function which returns a true boolean if the connection to the server is ready, and false if it's not.
