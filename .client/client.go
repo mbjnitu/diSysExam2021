@@ -87,15 +87,27 @@ func parseInput() {
 			continue
 		}
 
-		str := strings.Split(input, ":")[1]
+		var str string
+
+		if strings.Contains(input, ":") {
+			str = strings.Split(input, ":")[1]
+		} else {
+			fmt.Println("Commands: You formatted the command wrongly: No colon detected")
+			continue
+		}
 
 		if strings.Contains(input, "put") {
+			if strings.Contains(str, ",") == false {
+				fmt.Println("PUT: You formatted the command wrongly: No comma detected")
+				continue
+			}
 			key, errK := strconv.Atoi(strings.Split(str, ",")[0])
 			val, errV := strconv.Atoi(strings.Split(str, ",")[1])
 			if errK == nil && errV == nil {
 				Put(int64(key), int64(val))
 			} else {
-				fmt.Println("PUT: You formatted the command wrongly")
+				fmt.Println("PUT: You formatted the command wrongly: Missing 1 or 2 numbers")
+				continue
 			}
 
 		} else if strings.Contains(input, "get") {
@@ -103,7 +115,8 @@ func parseInput() {
 			if errK == nil {
 				Get(int64(key))
 			} else {
-				fmt.Println("GET: You formatted the command wrongly")
+				fmt.Println("GET: You formatted the command wrongly: Missing a number")
+				continue
 			}
 		}
 	}
